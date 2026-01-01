@@ -3,8 +3,11 @@ package com.example.autobudget.service
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.example.autobudget.data.local.PreferencesManager
 import com.example.autobudget.data.local.TransactionDatabase
 import com.example.autobudget.data.repository.TransactionRepository
+import com.example.autobudget.sheets.GoogleSheetsManager
+import com.example.autobudget.sheets.SyncManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +19,7 @@ class TransactionNotificationListener : NotificationListenerService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var transactionParser: TransactionParser
     private lateinit var transactionRepository: TransactionRepository
+    private lateinit var syncManager: SyncManager
 
     companion object {
         private const val TAG = "TransactionNotifListener"
@@ -31,6 +35,15 @@ class TransactionNotificationListener : NotificationListenerService() {
 
         val database = TransactionDatabase.getDatabase(applicationContext)
         transactionRepository = TransactionRepository(database.transactionDao())
+
+        val sheetsManager = GoogleSheetsManager(applicationContext)
+        val preferencesManager = PreferencesManager(applicationContext)
+        syncManager = SyncManager(
+            applicationContext,
+            transactionRepository,
+            sheetsManager,
+            preferencesManager
+        )
 
         Log.d(TAG, "Service created")
     }
@@ -76,11 +89,28 @@ class TransactionNotificationListener : NotificationListenerService() {
         if (transaction != null) {
             Log.d(TAG, "Parsed transaction: $${transaction.amount} at ${transaction.merchantName}")
 
-            // Save to database
+            // Save to database and sync to Google Sheets
             serviceScope.launch {
                 try {
-                    transactionRepository.insertTransaction(transaction)
-                    Log.d(TAG, "Transaction saved to database")
+                    // Insert transaction into database
+                    val transactionId = transactionRepository.insertTransaction(transaction)
+                    Log.d(TAG, "Transaction saved to database with ID: $transactionId")
+
+                    // Create a copy with the generated ID for syncing
+                    val transactionWithId = transaction.copy(id = transactionId)
+
+                    // Sync to Google Sheets
+                    val syncSuccess = syncManager.syncTransaction(transactionWithId)
+
+                    if (syncSuccess) {
+                        Log.d(TAG, "Transaction synced to Google Sheets")
+
+                        // Remove the notification only after successful sync
+                        cancelNotification(sbn.key)
+                        Log.d(TAG, "Notification dismissed")
+                    } else {
+                        Log.w(TAG, "Failed to sync transaction to Google Sheets, notification not dismissed")
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to save transaction", e)
                 }
