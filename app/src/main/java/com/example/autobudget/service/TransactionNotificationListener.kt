@@ -20,6 +20,7 @@ class TransactionNotificationListener : NotificationListenerService() {
     private lateinit var transactionParser: TransactionParser
     private lateinit var transactionRepository: TransactionRepository
     private lateinit var syncManager: SyncManager
+    private lateinit var notificationHelper: SyncNotificationHelper
 
     companion object {
         private const val TAG = "TransactionNotifListener"
@@ -44,6 +45,8 @@ class TransactionNotificationListener : NotificationListenerService() {
             sheetsManager,
             preferencesManager
         )
+
+        notificationHelper = SyncNotificationHelper(applicationContext)
 
         Log.d(TAG, "Service created")
     }
@@ -105,14 +108,34 @@ class TransactionNotificationListener : NotificationListenerService() {
                     if (syncSuccess) {
                         Log.d(TAG, "Transaction synced to Google Sheets")
 
+                        // Show success notification
+                        notificationHelper.showSyncSuccessNotification(
+                            transaction.merchantName,
+                            transaction.amount
+                        )
+
                         // Remove the notification only after successful sync
                         cancelNotification(sbn.key)
                         Log.d(TAG, "Notification dismissed")
                     } else {
                         Log.w(TAG, "Failed to sync transaction to Google Sheets, notification not dismissed")
+
+                        // Show failure notification
+                        notificationHelper.showSyncFailureNotification(
+                            transaction.merchantName,
+                            transaction.amount,
+                            "Check Google account connection and spreadsheet configuration"
+                        )
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to save transaction", e)
+
+                    // Show failure notification with error details
+                    notificationHelper.showSyncFailureNotification(
+                        transaction.merchantName,
+                        transaction.amount,
+                        e.message
+                    )
                 }
             }
         } else {
