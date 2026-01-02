@@ -17,7 +17,7 @@ class TransactionParser {
             "com.bankofamerica.cashpromobile", // Bank of America
             "com.citi.citimobile",             // Citi
             "com.usaa.mobile.android.usaa",    // USAA
-            "com.capitalone.mobile",           // Capital One
+            "com.konylabs.capitalone",         // Capital One
             "com.discover.mobile",             // Discover
             "com.americanexpress.android.acctsvcs.us", // Amex
             "com.pnc.ecommerce.mobile",        // PNC Bank
@@ -26,7 +26,7 @@ class TransactionParser {
             "com.squareup.cash",               // Cash App
             "com.google.android.apps.walletnfcrel", // Google Pay
             "com.apple.android.music",         // Apple Pay (unlikely on Android)
-            "com.zellepay.zelle",               // Zelle
+            "com.zellepay.zelle",              // Zelle
             "com.mand.notitest"
         )
 
