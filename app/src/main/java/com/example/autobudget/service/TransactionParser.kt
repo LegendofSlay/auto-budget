@@ -50,8 +50,38 @@ class TransactionParser {
 
         // Regex patterns for merchant extraction
         private val MERCHANT_PATTERNS = listOf(
+            // PNC Bank specific pattern: "purchase at DUNKIN #123456 Q35 in CITY USA for"
+            """(?:purchase|transaction)\s+at\s+([A-Za-z0-9\s#]+in\s+[A-Za-z\s]+(?:USA|US)?)\s+for""".toRegex(RegexOption.IGNORE_CASE),
             """(?:at|to|from|@)\s+([A-Za-z0-9\s&'.\-]+?)(?:\.|,|\s+on|\s+for|\s*$)""".toRegex(RegexOption.IGNORE_CASE),
             """(?:merchant|store|shop):\s*([A-Za-z0-9\s&'.\-]+)""".toRegex(RegexOption.IGNORE_CASE)
+        )
+
+        // Keyword to category mapping
+        private val CATEGORY_KEYWORDS = mapOf(
+            "dunkin" to "Coffee/Snacks",
+            "fuel" to "Transportation",
+            "paris baguette" to "Coffee/Snacks",
+            "cvs/pharmacy" to "Health/Medical",
+            "tello" to "Rent/Utilities",
+            "target" to "Home",
+            "wal-mart" to "Food",
+            "walmart" to "Food",
+            "shoprite" to "Food",
+            "bereket" to "Food",
+            "nur halal meat" to "Food",
+            "staples" to "Home",
+            "dollar tree" to "Home",
+            "google" to "Personal",
+            "apple.com" to "Personal",
+            "amazon" to "Home",
+            "cafe" to "Coffee/Snacks",
+            "expedia" to "Travel",
+            "cinnabon" to "Coffee/Snacks",
+            "plymouth rock" to "Rent/Utilities",
+            "orthodontics" to "Health/Medical",
+            "safwa" to "Coffee/Snacks",
+            "aldi" to "Food",
+            "jcpenney" to "Home"
         )
     }
 
@@ -92,12 +122,16 @@ class TransactionParser {
         // Create description from original text (trimmed)
         val description = combinedText.take(200)
 
+        // Detect category based on description
+        val category = detectCategory(description)
+
         return Transaction(
             amount = amount,
             description = description,
             merchantName = merchantName,
             transactionType = transactionType,
-            sourceApp = packageName
+            sourceApp = packageName,
+            category = category
         )
     }
 
@@ -145,5 +179,17 @@ class TransactionParser {
         }
 
         return text
+    }
+
+    private fun detectCategory(description: String): String {
+        val lowerDescription = description.lowercase()
+
+        for ((keyword, category) in CATEGORY_KEYWORDS) {
+            if (lowerDescription.contains(keyword)) {
+                return category
+            }
+        }
+
+        return "" // Return empty string if no keyword matches
     }
 }

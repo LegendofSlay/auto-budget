@@ -13,7 +13,8 @@ data class Transaction(
     val transactionType: TransactionType,
     val timestamp: Long = System.currentTimeMillis(),
     val sourceApp: String,
-    val syncStatus: SyncStatus = SyncStatus.PENDING
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val category: String = ""
 )
 
 enum class TransactionType {

@@ -33,14 +33,15 @@ class SyncNotificationHelper(private val context: Context) {
     /**
      * Show a notification for successful transaction sync
      */
-    fun showSyncSuccessNotification(merchantName: String, amount: Double) {
+    fun showSyncSuccessNotification(merchantName: String, amount: Double, category: String = "") {
         val formattedAmount = String.format(Locale.US, "%.2f", amount)
+        val categoryText = if (category.isNotEmpty()) " • $category" else ""
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info) // TODO: Use app icon
             .setContentTitle("Transaction Synced ✓")
-            .setContentText("$merchantName - $$formattedAmount")
+            .setContentText("$merchantName - $$formattedAmount$categoryText")
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("Successfully synced to Google Sheets\n$merchantName - $$formattedAmount"))
+                .bigText("Successfully synced to Google Sheets\n$merchantName - $$formattedAmount$categoryText"))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
@@ -56,9 +57,10 @@ class SyncNotificationHelper(private val context: Context) {
     /**
      * Show a notification for failed transaction sync
      */
-    fun showSyncFailureNotification(merchantName: String, amount: Double, errorMessage: String? = null) {
+    fun showSyncFailureNotification(merchantName: String, amount: Double, category: String = "", errorMessage: String? = null) {
         val formattedAmount = String.format(Locale.US, "%.2f", amount)
-        val contentText = "$merchantName - $$formattedAmount"
+        val categoryText = if (category.isNotEmpty()) " • $category" else ""
+        val contentText = "$merchantName - $$formattedAmount$categoryText"
         val bigText = if (errorMessage != null) {
             "Failed to sync to Google Sheets\n$contentText\nError: $errorMessage"
         } else {
@@ -85,14 +87,15 @@ class SyncNotificationHelper(private val context: Context) {
     /**
      * Show a notification for pending sync (saved locally but not synced yet)
      */
-    fun showSyncPendingNotification(merchantName: String, amount: Double) {
+    fun showSyncPendingNotification(merchantName: String, amount: Double, category: String = "") {
         val formattedAmount = String.format(Locale.US, "%.2f", amount)
+        val categoryText = if (category.isNotEmpty()) " • $category" else ""
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Transaction Saved")
-            .setContentText("$merchantName - $$formattedAmount")
+            .setContentText("$merchantName - $$formattedAmount$categoryText")
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("Saved locally, sync pending\n$merchantName - $$formattedAmount"))
+                .bigText("Saved locally, sync pending\n$merchantName - $$formattedAmount$categoryText"))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setAutoCancel(true)
             .build()

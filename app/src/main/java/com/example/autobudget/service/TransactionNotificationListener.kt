@@ -111,7 +111,8 @@ class TransactionNotificationListener : NotificationListenerService() {
                         // Show success notification
                         notificationHelper.showSyncSuccessNotification(
                             transaction.merchantName,
-                            transaction.amount
+                            transaction.amount,
+                            transaction.category
                         )
 
                         // Remove the notification only after successful sync
@@ -124,6 +125,7 @@ class TransactionNotificationListener : NotificationListenerService() {
                         notificationHelper.showSyncFailureNotification(
                             transaction.merchantName,
                             transaction.amount,
+                            transaction.category,
                             "Check Google account connection and spreadsheet configuration"
                         )
                     }
@@ -134,6 +136,7 @@ class TransactionNotificationListener : NotificationListenerService() {
                     notificationHelper.showSyncFailureNotification(
                         transaction.merchantName,
                         transaction.amount,
+                        transaction.category,
                         e.message
                     )
                 }

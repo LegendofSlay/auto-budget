@@ -72,7 +72,7 @@ class GoogleSheetsManager(private val context: Context) {
                 dateFormat.format(Date(transaction.timestamp)),
                 transaction.amount.toString(),
                 transaction.merchantName,
-                "Auto Budget"
+                transaction.category
             )
 
             val body = ValueRange().setValues(listOf(row))
