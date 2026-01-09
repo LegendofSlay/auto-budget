@@ -50,6 +50,8 @@ class TransactionParser {
 
         // Regex patterns for merchant extraction
         private val MERCHANT_PATTERNS = listOf(
+            // PNC Bank specific pattern: "was used at Test YOUTH CENTER in +12345678901 USA for"
+            """was\s+used\s+at\s+([A-Za-z0-9\s*/#+\-&'.]+?)\s+in\s+\+?\d+\s+(?:USA|US)""".toRegex(RegexOption.IGNORE_CASE),
             // PNC Bank specific pattern: "was used at CVS/PHARMACY #02815 in EAST BRUNSWIC USA for"
             """was\s+used\s+at\s+([A-Za-z0-9\s*/#+\-&'.]+in\s+[A-Za-z\s]+(?:USA|US)?)\s+for""".toRegex(RegexOption.IGNORE_CASE),
             // PNC Bank specific pattern: "purchase at DUNKIN #123456 Q35 in CITY USA for"
