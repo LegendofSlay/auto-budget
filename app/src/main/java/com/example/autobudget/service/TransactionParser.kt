@@ -7,11 +7,15 @@ import com.example.autobudget.data.model.TransactionType
  * Parses notification text to extract financial transaction details.
  * Supports common patterns from banks and payment apps.
  */
-class TransactionParser {
+class TransactionParser(
+    private var configuredApps: Set<String> = emptySet(),
+    private var excludedApps: Set<String> = emptySet(),
+    private var customCategoryMappings: Map<String, String> = emptyMap()
+) {
 
     companion object {
-        // Common financial app package names
-        val FINANCIAL_APPS = setOf(
+        // Default financial app package names - this list is always preserved
+        val DEFAULT_FINANCIAL_APPS = setOf(
             "com.chase.sig.android",           // Chase
             "com.wf.wellsfargomobile",         // Wells Fargo
             "com.bankofamerica.cashpromobile", // Bank of America
@@ -27,7 +31,6 @@ class TransactionParser {
             "com.google.android.apps.walletnfcrel", // Google Pay
             "com.apple.android.music",         // Apple Pay (unlikely on Android)
             "com.zellepay.zelle",              // Zelle
-            "com.mand.notitest"
         )
 
         // Regex patterns for amount extraction
@@ -60,41 +63,57 @@ class TransactionParser {
             """(?:merchant|store|shop):\s*([A-Za-z0-9\s&'.\-]+)""".toRegex(RegexOption.IGNORE_CASE)
         )
 
-        // Keyword to category mapping
-        private val CATEGORY_KEYWORDS = mapOf(
-            "dunkin" to "Coffee/Snacks",
-            "fuel" to "Transportation",
-            "paris baguette" to "Coffee/Snacks",
-            "cvs/pharmacy" to "Health/Medical",
-            "tello" to "Rent/Utilities",
-            "target" to "Home",
-            "wal-mart" to "Food",
-            "walmart" to "Food",
-            "shoprite" to "Food",
-            "bereket" to "Food",
-            "nur halal meat" to "Food",
-            "staples" to "Home",
-            "dollar tree" to "Home",
-            "google" to "Personal",
-            "apple.com" to "Personal",
-            "amazon" to "Home",
-            "cafe" to "Coffee/Snacks",
-            "expedia" to "Travel",
-            "cinnabon" to "Coffee/Snacks",
-            "plymouth rock" to "Rent/Utilities",
-            "orthodontics" to "Health/Medical",
-            "safwa" to "Coffee/Snacks",
-            "aldi" to "Food",
-            "jcpenney" to "Home",
-            "ny times" to "Personal"
-        )
+        // Keyword to category mapping - Default mappings that are always preserved
+        val DEFAULT_CATEGORY_KEYWORDS = emptyMap<String, String>()
+    }
+
+    /**
+     * Updates the list of configured financial apps
+     */
+    fun updateConfiguredApps(apps: Set<String>) {
+        configuredApps = apps
+    }
+
+    /**
+     * Updates the list of excluded apps
+     */
+    fun updateExcludedApps(apps: Set<String>) {
+        excludedApps = apps
+    }
+
+    /**
+     * Updates the custom category mappings
+     */
+    fun updateCategoryMappings(mappings: Map<String, String>) {
+        customCategoryMappings = mappings
+    }
+
+    /**
+     * Gets the complete category mappings (default + custom)
+     */
+    fun getAllCategoryMappings(): Map<String, String> {
+        return DEFAULT_CATEGORY_KEYWORDS + customCategoryMappings
+    }
+
+    /**
+     * Gets the complete list of financial apps (default + configured)
+     */
+    fun getAllFinancialApps(): Set<String> {
+        return DEFAULT_FINANCIAL_APPS + configuredApps
     }
 
     /**
      * Checks if the given package name belongs to a financial app
+     * Returns false if the app is in the exclusion list
      */
     fun isFinancialApp(packageName: String): Boolean {
-        return FINANCIAL_APPS.contains(packageName) ||
+        // First check if the app is explicitly excluded
+        if (excludedApps.contains(packageName)) {
+            return false
+        }
+
+        val allApps = getAllFinancialApps()
+        return allApps.contains(packageName) ||
                packageName.contains("bank", ignoreCase = true) ||
                packageName.contains("pay", ignoreCase = true) ||
                packageName.contains("wallet", ignoreCase = true) ||
@@ -188,8 +207,9 @@ class TransactionParser {
 
     private fun detectCategory(description: String): String {
         val lowerDescription = description.lowercase()
+        val allMappings = getAllCategoryMappings()
 
-        for ((keyword, category) in CATEGORY_KEYWORDS) {
+        for ((keyword, category) in allMappings) {
             if (lowerDescription.contains(keyword)) {
                 return category
             }

@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -34,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,11 +46,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.autobudget.ui.components.ConnectionStatusCard
 import com.example.autobudget.ui.components.TransactionCard
 import com.example.autobudget.ui.viewmodel.HomeViewModel
+import com.example.autobudget.service.TransactionParser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,8 +70,61 @@ fun HomeScreen(
     val recentTransactions by viewModel.recentTransactions.collectAsState()
     val pendingTransactions by viewModel.pendingTransactions.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val configuredFinancialApps by viewModel.configuredFinancialApps.collectAsState()
+    val excludedApps by viewModel.excludedApps.collectAsState()
+    val categoryMappings by viewModel.categoryMappings.collectAsState()
+    val categories by viewModel.categories.collectAsState()
 
     var showSpreadsheetDialog by remember { mutableStateOf(false) }
+    var showConfigureAppsScreen by remember { mutableStateOf(false) }
+    var showConfigureCategoryScreen by remember { mutableStateOf(false) }
+    var showSettingsDropdown by remember { mutableStateOf(false) }
+
+    // Show ConfigureAppsScreen if requested
+    if (showConfigureAppsScreen) {
+        ConfigureAppsScreen(
+            defaultApps = TransactionParser.DEFAULT_FINANCIAL_APPS,
+            configuredApps = configuredFinancialApps,
+            excludedApps = excludedApps,
+            onBack = { showConfigureAppsScreen = false },
+            onAddApp = { packageName ->
+                viewModel.addFinancialApp(packageName)
+            },
+            onRemoveApp = { packageName ->
+                viewModel.removeFinancialApp(packageName)
+            },
+            onAddExcludedApp = { packageName ->
+                viewModel.addExcludedApp(packageName)
+            },
+            onRemoveExcludedApp = { packageName ->
+                viewModel.removeExcludedApp(packageName)
+            }
+        )
+        return
+    }
+
+    // Show ConfigureCategoryScreen if requested
+    if (showConfigureCategoryScreen) {
+        ConfigureCategoryScreen(
+            defaultMappings = TransactionParser.DEFAULT_CATEGORY_KEYWORDS,
+            customMappings = categoryMappings,
+            categories = categories,
+            onBack = { showConfigureCategoryScreen = false },
+            onAddMapping = { keyword, category ->
+                viewModel.addCategoryMapping(keyword, category)
+            },
+            onRemoveMapping = { keyword ->
+                viewModel.removeCategoryMapping(keyword)
+            },
+            onAddCategory = { category ->
+                viewModel.addCategory(category)
+            },
+            onRemoveCategory = { category ->
+                viewModel.removeCategory(category)
+            }
+        )
+        return
+    }
 
     // Google Sign-In launcher
     val signInLauncher = rememberLauncherForActivityResult(
@@ -73,7 +133,30 @@ fun HomeScreen(
         viewModel.handleSignInResult(result.data)
     }
 
-    // Check notification listener status on resume
+    // Notification settings launcher
+    val notificationSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Refresh notification listener status when user returns from settings
+        viewModel.checkNotificationListenerStatus(context)
+    }
+
+    // Observe lifecycle to refresh when app comes back into view
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Refresh notification listener status when app resumes
+                viewModel.checkNotificationListenerStatus(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Check notification listener status on initial composition
     LaunchedEffect(Unit) {
         viewModel.checkNotificationListenerStatus(context)
     }
@@ -103,11 +186,36 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
                 actions = {
-                    IconButton(onClick = { viewModel.checkNotificationListenerStatus(context) }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                    IconButton(onClick = { showSpreadsheetDialog = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    Box {
+                        IconButton(onClick = { showSettingsDropdown = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                        DropdownMenu(
+                            expanded = showSettingsDropdown,
+                            onDismissRequest = { showSettingsDropdown = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Configure Spreadsheet") },
+                                onClick = {
+                                    showSettingsDropdown = false
+                                    showSpreadsheetDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Configure Detected Apps") },
+                                onClick = {
+                                    showSettingsDropdown = false
+                                    showConfigureAppsScreen = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Configure Category Mapping") },
+                                onClick = {
+                                    showSettingsDropdown = false
+                                    showConfigureCategoryScreen = true
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -146,7 +254,7 @@ fun HomeScreen(
                         onSignOutClick = { viewModel.signOut() },
                         onSetupNotificationsClick = {
                             val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                            context.startActivity(intent)
+                            notificationSettingsLauncher.launch(intent)
                         },
                         onSyncClick = { viewModel.syncNow() }
                     )

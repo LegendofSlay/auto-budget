@@ -55,6 +55,19 @@ class HomeViewModel(
     private val _notificationListenerEnabled = MutableStateFlow(false)
     val notificationListenerEnabled: StateFlow<Boolean> = _notificationListenerEnabled.asStateFlow()
 
+    // Financial Apps Configuration
+    val configuredFinancialApps: StateFlow<Set<String>> = preferencesManager.financialApps
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val excludedApps: StateFlow<Set<String>> = preferencesManager.excludedApps
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val categoryMappings: StateFlow<Map<String, String>> = preferencesManager.categoryMappings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    val categories: StateFlow<Set<String>> = preferencesManager.categories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     init {
         // Load saved preferences
         viewModelScope.launch {
@@ -161,6 +174,78 @@ class HomeViewModel(
             errorMessage = null,
             successMessage = null
         )
+    }
+
+    fun addFinancialApp(packageName: String) {
+        viewModelScope.launch {
+            preferencesManager.addFinancialApp(packageName)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Added $packageName to monitored apps"
+            )
+        }
+    }
+
+    fun removeFinancialApp(packageName: String) {
+        viewModelScope.launch {
+            preferencesManager.removeFinancialApp(packageName)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Removed $packageName from monitored apps"
+            )
+        }
+    }
+
+    fun addExcludedApp(packageName: String) {
+        viewModelScope.launch {
+            preferencesManager.addExcludedApp(packageName)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Added $packageName to exclusion list"
+            )
+        }
+    }
+
+    fun removeExcludedApp(packageName: String) {
+        viewModelScope.launch {
+            preferencesManager.removeExcludedApp(packageName)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Removed $packageName from exclusion list"
+            )
+        }
+    }
+
+    fun addCategoryMapping(keyword: String, category: String) {
+        viewModelScope.launch {
+            preferencesManager.addCategoryMapping(keyword, category)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Added category mapping: $keyword → $category"
+            )
+        }
+    }
+
+    fun removeCategoryMapping(keyword: String) {
+        viewModelScope.launch {
+            preferencesManager.removeCategoryMapping(keyword)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Removed category mapping for: $keyword"
+            )
+        }
+    }
+
+    fun addCategory(category: String) {
+        viewModelScope.launch {
+            preferencesManager.addCategory(category)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Added category: $category"
+            )
+        }
+    }
+
+    fun removeCategory(category: String) {
+        viewModelScope.launch {
+            preferencesManager.removeCategory(category)
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Removed category: $category"
+            )
+        }
     }
 
     class Factory(
