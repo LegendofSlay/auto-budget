@@ -21,6 +21,7 @@ class TransactionNotificationListener : NotificationListenerService() {
     private lateinit var transactionRepository: TransactionRepository
     private lateinit var syncManager: SyncManager
     private lateinit var notificationHelper: SyncNotificationHelper
+    private lateinit var preferencesManager: PreferencesManager
 
     companion object {
         private const val TAG = "TransactionNotifListener"
@@ -38,7 +39,7 @@ class TransactionNotificationListener : NotificationListenerService() {
         transactionRepository = TransactionRepository(database.transactionDao())
 
         val sheetsManager = GoogleSheetsManager(applicationContext)
-        val preferencesManager = PreferencesManager(applicationContext)
+        preferencesManager = PreferencesManager(applicationContext)
         syncManager = SyncManager(
             applicationContext,
             transactionRepository,
@@ -47,6 +48,30 @@ class TransactionNotificationListener : NotificationListenerService() {
         )
 
         notificationHelper = SyncNotificationHelper(applicationContext)
+
+        // Load configured financial apps from preferences
+        serviceScope.launch {
+            preferencesManager.financialApps.collect { apps ->
+                transactionParser.updateConfiguredApps(apps)
+                Log.d(TAG, "Updated configured apps: ${apps.size} custom apps")
+            }
+        }
+
+        // Load excluded apps from preferences
+        serviceScope.launch {
+            preferencesManager.excludedApps.collect { apps ->
+                transactionParser.updateExcludedApps(apps)
+                Log.d(TAG, "Updated excluded apps: ${apps.size} excluded apps")
+            }
+        }
+
+        // Load custom category mappings from preferences
+        serviceScope.launch {
+            preferencesManager.categoryMappings.collect { mappings ->
+                transactionParser.updateCategoryMappings(mappings)
+                Log.d(TAG, "Updated category mappings: ${mappings.size} custom mappings")
+            }
+        }
 
         Log.d(TAG, "Service created")
     }
