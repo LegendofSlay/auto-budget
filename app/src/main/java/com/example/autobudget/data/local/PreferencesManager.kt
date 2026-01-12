@@ -33,7 +33,8 @@ class PreferencesManager(private val context: Context) {
             "Personal",
             "Transportation",
             "Dining/Fast Food",
-            "Travel"
+            "Travel",
+            "Entertainment",
         )
     }
 
@@ -176,6 +177,13 @@ class PreferencesManager(private val context: Context) {
     suspend fun clearGoogleAccount() {
         context.dataStore.edit { preferences ->
             preferences.remove(GOOGLE_ACCOUNT_EMAIL)
+        }
+    }
+
+    suspend fun clearSpreadsheetConfig() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(SPREADSHEET_ID)
+            preferences.remove(SPREADSHEET_NAME)
         }
     }
 

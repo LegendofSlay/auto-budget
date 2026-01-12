@@ -105,7 +105,9 @@ class HomeViewModel(
     fun signOut() {
         viewModelScope.launch {
             googleAuthManager.signOut()
-            preferencesManager.clearAll()
+            // Only clear Google account and spreadsheet data, keep app configurations
+            preferencesManager.clearGoogleAccount()
+            preferencesManager.clearSpreadsheetConfig()
             _spreadsheetId.value = null
             _spreadsheetName.value = null
         }
