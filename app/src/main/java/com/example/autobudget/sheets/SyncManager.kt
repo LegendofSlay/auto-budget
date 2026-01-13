@@ -29,6 +29,7 @@ class SyncManager(
      */
     suspend fun syncTransaction(transaction: Transaction): Boolean {
         val spreadsheetId = preferencesManager.spreadsheetId.first()
+        val sheetTabName = preferencesManager.sheetTabName.first()
 
         if (spreadsheetId.isNullOrBlank()) {
             Log.w(TAG, "No spreadsheet configured, skipping sync")
@@ -36,7 +37,7 @@ class SyncManager(
         }
 
         return try {
-            val result = sheetsManager.appendTransaction(spreadsheetId, transaction)
+            val result = sheetsManager.appendTransaction(spreadsheetId, transaction, sheetTabName)
 
             if (result.isSuccess) {
                 transactionRepository.updateSyncStatus(transaction.id, SyncStatus.SYNCED)

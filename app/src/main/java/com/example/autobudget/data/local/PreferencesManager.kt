@@ -17,6 +17,7 @@ class PreferencesManager(private val context: Context) {
     companion object {
         val SPREADSHEET_ID = stringPreferencesKey("spreadsheet_id")
         val SPREADSHEET_NAME = stringPreferencesKey("spreadsheet_name")
+        val SHEET_TAB_NAME = stringPreferencesKey("sheet_tab_name")
         val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
         val FINANCIAL_APPS = stringSetPreferencesKey("financial_apps")
         val EXCLUDED_APPS = stringSetPreferencesKey("excluded_apps")
@@ -44,6 +45,10 @@ class PreferencesManager(private val context: Context) {
 
     val spreadsheetName: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[SPREADSHEET_NAME]
+    }
+
+    val sheetTabName: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[SHEET_TAB_NAME] ?: "Transactions"
     }
 
     val googleAccountEmail: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -91,10 +96,11 @@ class PreferencesManager(private val context: Context) {
         return mappings.entries.joinToString(",") { "${it.key}:${it.value}" }
     }
 
-    suspend fun saveSpreadsheetConfig(spreadsheetId: String, spreadsheetName: String) {
+    suspend fun saveSpreadsheetConfig(spreadsheetId: String, spreadsheetName: String, sheetTabName: String = "Transactions") {
         context.dataStore.edit { preferences ->
             preferences[SPREADSHEET_ID] = spreadsheetId
             preferences[SPREADSHEET_NAME] = spreadsheetName
+            preferences[SHEET_TAB_NAME] = sheetTabName.ifBlank { "Transactions" }
         }
     }
 

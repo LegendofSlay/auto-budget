@@ -56,11 +56,12 @@ class GoogleSheetsManager(private val context: Context) {
     }
 
     /**
-     * Appends a transaction as a new row in the "Transactions" sheet
+     * Appends a transaction as a new row in the specified sheet tab
      */
     suspend fun appendTransaction(
         spreadsheetId: String,
-        transaction: Transaction
+        transaction: Transaction,
+        sheetTabName: String = "Transactions"
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val service = getSheetsService() ?: return@withContext Result.failure(
@@ -77,9 +78,9 @@ class GoogleSheetsManager(private val context: Context) {
 
             val body = ValueRange().setValues(listOf(row))
 
-            // Append to the "Transactions" sheet
+            // Append to the specified sheet tab
             service.spreadsheets().values()
-                .append(spreadsheetId, "Transactions!B:E", body)
+                .append(spreadsheetId, "$sheetTabName!B:E", body)
                 .setValueInputOption("USER_ENTERED")
                 .setInsertDataOption("OVERWRITE")
                 .execute()
@@ -91,9 +92,9 @@ class GoogleSheetsManager(private val context: Context) {
     }
 
     /**
-     * Creates the header row in the Transactions sheet if it doesn't exist
+     * Creates the header row in the specified sheet tab if it doesn't exist
      */
-    suspend fun ensureHeadersExist(spreadsheetId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun ensureHeadersExist(spreadsheetId: String, sheetTabName: String = "Transactions"): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val service = getSheetsService() ?: return@withContext Result.failure(
                 Exception("Not signed in to Google")
@@ -101,7 +102,7 @@ class GoogleSheetsManager(private val context: Context) {
 
             // Check if there's already data
             val response = service.spreadsheets().values()
-                .get(spreadsheetId, "Transactions!A1:F1")
+                .get(spreadsheetId, "$sheetTabName!A1:F1")
                 .execute()
 
             val values = response.getValues()
@@ -117,7 +118,7 @@ class GoogleSheetsManager(private val context: Context) {
                 val body = ValueRange().setValues(listOf(headers))
 
                 service.spreadsheets().values()
-                    .update(spreadsheetId, "Transactions!B4:E4", body)
+                    .update(spreadsheetId, "$sheetTabName!B4:E4", body)
                     .setValueInputOption("RAW")
                     .execute()
             }

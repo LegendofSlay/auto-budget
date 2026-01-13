@@ -1,6 +1,10 @@
 package com.example.autobudget.ui.screens
 
+import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,13 +12,55 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
+
+// Data class to hold installed app information
+data class InstalledAppInfo(
+    val packageName: String,
+    val appName: String,
+    val icon: Drawable?
+)
+
+// Helper function to get installed apps
+suspend fun getInstalledApps(packageManager: PackageManager): List<InstalledAppInfo> {
+    return withContext(Dispatchers.Default) {
+        try {
+            val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            apps.filter { appInfo ->
+                // Only show apps that have a launcher activity (user-facing apps)
+                packageManager.getLaunchIntentForPackage(appInfo.packageName) != null
+            }.map { appInfo ->
+                InstalledAppInfo(
+                    packageName = appInfo.packageName,
+                    appName = try {
+                        packageManager.getApplicationLabel(appInfo).toString()
+                    } catch (_: Exception) {
+                        appInfo.packageName
+                    },
+                    icon = try {
+                        packageManager.getApplicationIcon(appInfo.packageName)
+                    } catch (_: Exception) {
+                        null
+                    }
+                )
+            }.sortedBy { it.appName.lowercase() }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -189,9 +235,9 @@ fun ConfigureAppsScreen(
 
     // Add App Dialog
     if (showAddDialog) {
-        AddAppDialog(
+        AppSelectorDialog(
             title = "Add Financial App",
-            description = "Enter the package name of the financial app you want to monitor:",
+            description = "Select an app to monitor for financial notifications:",
             onDismiss = { showAddDialog = false },
             onConfirm = { packageName ->
                 onAddApp(packageName)
@@ -202,9 +248,9 @@ fun ConfigureAppsScreen(
 
     // Add Excluded App Dialog
     if (showAddExcludedDialog) {
-        AddAppDialog(
+        AppSelectorDialog(
             title = "Exclude App",
-            description = "Enter the package name of the app you want to exclude from monitoring:",
+            description = "Select an app to exclude from monitoring:",
             onDismiss = { showAddExcludedDialog = false },
             onConfirm = { packageName ->
                 onAddExcludedApp(packageName)
@@ -316,6 +362,173 @@ fun AppListItem(
             }
         }
     }
+}
+
+@Composable
+fun AppSelectorDialog(
+    title: String,
+    description: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val packageManager = context.packageManager
+
+    var installedApps by remember { mutableStateOf<List<InstalledAppInfo>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Load installed apps
+    LaunchedEffect(Unit) {
+        installedApps = getInstalledApps(packageManager)
+        isLoading = false
+    }
+
+    // Filter apps based on search query
+    val filteredApps = remember(installedApps, searchQuery) {
+        if (searchQuery.isBlank()) {
+            installedApps
+        } else {
+            installedApps.filter { app ->
+                app.appName.contains(searchQuery, ignoreCase = true) ||
+                app.packageName.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+            ) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                // Search bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search apps") },
+                    placeholder = { Text("App name or package") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // App list
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (filteredApps.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (searchQuery.isBlank())
+                                "No apps found"
+                            else
+                                "No apps match your search",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(filteredApps) { app ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onConfirm(app.packageName)
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // App icon
+                                    if (app.icon != null) {
+                                        val bitmap = remember(app.icon) {
+                                            app.icon.toBitmap().asImageBitmap()
+                                        }
+                                        Image(
+                                            bitmap = bitmap,
+                                            contentDescription = "${app.appName} icon",
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.size(40.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Add,
+                                                contentDescription = "Default icon",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    // App info
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = app.appName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = app.packageName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

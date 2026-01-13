@@ -113,7 +113,7 @@ class HomeViewModel(
         }
     }
 
-    fun setSpreadsheet(urlOrId: String) {
+    fun setSpreadsheet(urlOrId: String, sheetTabName: String = "Transactions") {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
@@ -131,12 +131,13 @@ class HomeViewModel(
 
             result.fold(
                 onSuccess = { title ->
-                    preferencesManager.saveSpreadsheetConfig(spreadsheetId, title)
+                    val tabName = sheetTabName.ifBlank { "Transactions" }
+                    preferencesManager.saveSpreadsheetConfig(spreadsheetId, title, tabName)
                     _spreadsheetId.value = spreadsheetId
                     _spreadsheetName.value = title
 
-                    // Try to ensure headers exist
-                    googleSheetsManager.ensureHeadersExist(spreadsheetId)
+                    // Try to ensure headers exist with the specified tab name
+                    googleSheetsManager.ensureHeadersExist(spreadsheetId, tabName)
 
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

@@ -301,8 +301,8 @@ fun HomeScreen(
         SpreadsheetConfigDialog(
             currentSpreadsheetName = spreadsheetName,
             onDismiss = { showSpreadsheetDialog = false },
-            onConfirm = { urlOrId ->
-                viewModel.setSpreadsheet(urlOrId)
+            onConfirm = { urlOrId, sheetTabName ->
+                viewModel.setSpreadsheet(urlOrId, sheetTabName)
                 showSpreadsheetDialog = false
             }
         )
@@ -313,9 +313,10 @@ fun HomeScreen(
 fun SpreadsheetConfigDialog(
     currentSpreadsheetName: String?,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (urlOrId: String, sheetTabName: String) -> Unit
 ) {
     var spreadsheetInput by remember { mutableStateOf("") }
+    var sheetTabInput by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -348,10 +349,28 @@ fun SpreadsheetConfigDialog(
                     maxLines = 3
                 )
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Enter the sheet tab name:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = sheetTabInput,
+                    onValueChange = { sheetTabInput = it },
+                    label = { Text("Sheet Tab Name") },
+                    placeholder = { Text("Transactions") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Note: Make sure the spreadsheet has a sheet tab named 'Transactions'",
+                    text = "Note: If no tab name is provided, 'Transactions' will be used as the default.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -359,7 +378,10 @@ fun SpreadsheetConfigDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(spreadsheetInput) },
+                onClick = {
+                    val tabName = sheetTabInput.ifBlank { "Transactions" }
+                    onConfirm(spreadsheetInput, tabName)
+                },
                 enabled = spreadsheetInput.isNotBlank()
             ) {
                 Text("Connect")
