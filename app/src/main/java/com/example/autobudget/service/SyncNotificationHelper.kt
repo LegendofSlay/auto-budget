@@ -37,7 +37,7 @@ class SyncNotificationHelper(private val context: Context) {
         val formattedAmount = String.format(Locale.US, "%.2f", amount)
         val categoryText = if (category.isNotEmpty()) " • $category" else ""
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // TODO: Use app icon
+            .setSmallIcon(com.example.autobudget.R.mipmap.ic_launcher)
             .setContentTitle("Transaction Synced ✓")
             .setContentText("$merchantName - $$formattedAmount$categoryText")
             .setStyle(NotificationCompat.BigTextStyle()
@@ -68,7 +68,7 @@ class SyncNotificationHelper(private val context: Context) {
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert) // TODO: Use app icon
+            .setSmallIcon(com.example.autobudget.R.mipmap.ic_launcher)
             .setContentTitle("Sync Failed ✗")
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
@@ -91,7 +91,7 @@ class SyncNotificationHelper(private val context: Context) {
         val formattedAmount = String.format(Locale.US, "%.2f", amount)
         val categoryText = if (category.isNotEmpty()) " • $category" else ""
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.example.autobudget.R.mipmap.ic_launcher)
             .setContentTitle("Transaction Saved")
             .setContentText("$merchantName - $$formattedAmount$categoryText")
             .setStyle(NotificationCompat.BigTextStyle()
