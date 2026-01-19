@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.autobudget.BuildConfig
 import com.example.autobudget.ui.components.ConnectionStatusCard
 import com.example.autobudget.ui.components.TransactionCard
 import com.example.autobudget.ui.components.UpgradeDialog
@@ -251,21 +252,25 @@ fun HomeScreen(
                                     }
                                 }
                             )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (isPremiumUser) "⭐ Premium Active - Toggle Off (Debug)"
-                                        else "Toggle Premium (Debug Testing)",
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                },
-                                onClick = {
-                                    showSettingsDropdown = false
-                                    viewModel.debugTogglePremium()
-                                }
-                            )
+
+                            // Debug menu items - only shown when debug flag is enabled
+                            if (BuildConfig.ENABLE_DEBUG_MENU) {
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (isPremiumUser) "⭐ Premium Active - Toggle Off (Debug)"
+                                            else "Toggle Premium (Debug Testing)",
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    },
+                                    onClick = {
+                                        showSettingsDropdown = false
+                                        viewModel.debugTogglePremium()
+                                    }
+                                )
+                            }
                         }
                     }
                 }

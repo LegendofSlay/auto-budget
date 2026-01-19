@@ -35,9 +35,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("boolean", "ENABLE_DEBUG_MENU", "false")
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
+            buildConfigField("boolean", "ENABLE_DEBUG_MENU", "true")
         }
     }
     compileOptions {
@@ -49,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
