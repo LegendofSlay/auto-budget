@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
                         factory = HomeViewModel.Factory(
                             transactionRepository = app.transactionRepository,
                             preferencesManager = app.preferencesManager,
+                            subscriptionManager = app.subscriptionManager,
                             googleAuthManager = app.googleAuthManager,
                             googleSheetsManager = app.googleSheetsManager,
                             syncManager = app.syncManager

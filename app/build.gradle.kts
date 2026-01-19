@@ -101,6 +101,9 @@ dependencies {
     implementation("com.google.api-client:google-api-client-android:2.2.0")
     implementation("com.google.apis:google-api-services-sheets:v4-rev20240319-2.0.0")
 
+    // Google Play Billing
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

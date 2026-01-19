@@ -24,6 +24,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.autobudget.ui.components.ConnectionStatusCard
 import com.example.autobudget.ui.components.TransactionCard
+import com.example.autobudget.ui.components.UpgradeDialog
 import com.example.autobudget.ui.viewmodel.HomeViewModel
 import com.example.autobudget.service.TransactionParser
 
@@ -74,6 +76,7 @@ fun HomeScreen(
     val excludedApps by viewModel.excludedApps.collectAsState()
     val categoryMappings by viewModel.categoryMappings.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val isPremiumUser by viewModel.isPremiumUser.collectAsState()
 
     var showSpreadsheetDialog by remember { mutableStateOf(false) }
     var showConfigureAppsScreen by remember { mutableStateOf(false) }
@@ -86,8 +89,13 @@ fun HomeScreen(
             defaultApps = TransactionParser.DEFAULT_FINANCIAL_APPS,
             configuredApps = configuredFinancialApps,
             excludedApps = excludedApps,
+            isPremiumUser = isPremiumUser,
             onBack = { showConfigureAppsScreen = false },
             onAddApp = { packageName ->
+                // Check if this will trigger upgrade dialog (free user at limit)
+                if (!isPremiumUser && configuredFinancialApps.size >= 3) {
+                    showConfigureAppsScreen = false
+                }
                 viewModel.addFinancialApp(packageName)
             },
             onRemoveApp = { packageName ->
@@ -109,14 +117,23 @@ fun HomeScreen(
             defaultMappings = TransactionParser.DEFAULT_CATEGORY_KEYWORDS,
             customMappings = categoryMappings,
             categories = categories,
+            isPremiumUser = isPremiumUser,
             onBack = { showConfigureCategoryScreen = false },
             onAddMapping = { keyword, category ->
+                // Check if this will trigger upgrade dialog (free user at limit)
+                if (!isPremiumUser && categoryMappings.size >= 10) {
+                    showConfigureCategoryScreen = false
+                }
                 viewModel.addCategoryMapping(keyword, category)
             },
             onRemoveMapping = { keyword ->
                 viewModel.removeCategoryMapping(keyword)
             },
             onAddCategory = { category ->
+                // Empty string means free user clicked add category button
+                if (category.isEmpty()) {
+                    showConfigureCategoryScreen = false
+                }
                 viewModel.addCategory(category)
             },
             onRemoveCategory = { category ->
@@ -215,6 +232,34 @@ fun HomeScreen(
                                     showConfigureCategoryScreen = true
                                 }
                             )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "Upgrade to Premium",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                onClick = {
+                                    showSettingsDropdown = false
+                                    viewModel.showUpgradeDialog()
+                                }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (isPremiumUser) "⭐ Premium Active - Toggle Off (Debug)"
+                                        else "Toggle Premium (Debug Testing)",
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                },
+                                onClick = {
+                                    showSettingsDropdown = false
+                                    viewModel.debugTogglePremium()
+                                }
+                            )
                         }
                     }
                 }
@@ -294,6 +339,16 @@ fun HomeScreen(
                 )
             }
         }
+    }
+
+    // Upgrade Dialog
+    if (uiState.showUpgradeDialog) {
+        UpgradeDialog(
+            feature = uiState.upgradeDialogFeature,
+            currentLimit = uiState.upgradeDialogLimit,
+            onDismiss = { viewModel.dismissUpgradeDialog() },
+            onUpgrade = { viewModel.upgradeToPremium(context) }
+        )
     }
 
     // Spreadsheet Configuration Dialog

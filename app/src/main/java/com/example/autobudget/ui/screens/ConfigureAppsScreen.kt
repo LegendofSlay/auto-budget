@@ -68,6 +68,7 @@ fun ConfigureAppsScreen(
     defaultApps: Set<String>,
     configuredApps: Set<String>,
     excludedApps: Set<String>,
+    isPremiumUser: Boolean,
     onBack: () -> Unit,
     onAddApp: (String) -> Unit,
     onRemoveApp: (String) -> Unit,
@@ -142,7 +143,7 @@ fun ConfigureAppsScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "Custom Financial Apps",
+                            text = "Custom Financial Apps (${configuredApps.size})",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -154,11 +155,31 @@ fun ConfigureAppsScreen(
                                 "No custom apps yet - tap + to add",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
+                        if (!isPremiumUser) {
+                            Text(
+                                text = "Free tier: ${configuredApps.size}/3 apps used",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (configuredApps.size >= 3)
+                                    MaterialTheme.colorScheme.error
+                                else
+                                    MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     IconButton(
-                        onClick = { showAddDialog = true },
+                        onClick = {
+                            if (isPremiumUser || configuredApps.size < 3) {
+                                showAddDialog = true
+                            } else {
+                                // For free users at limit, navigate back first then show upgrade dialog
+                                onBack()
+                                // Trigger a dummy app to show upgrade dialog
+                                onAddApp("")
+                            }
+                        },
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Icon(

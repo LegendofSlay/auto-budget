@@ -22,6 +22,7 @@ fun ConfigureCategoryScreen(
     defaultMappings: Map<String, String>,
     customMappings: Map<String, String>,
     categories: Set<String>,
+    isPremiumUser: Boolean,
     onBack: () -> Unit,
     onAddMapping: (String, String) -> Unit,
     onRemoveMapping: (String) -> Unit,
@@ -96,11 +97,27 @@ fun ConfigureCategoryScreen(
                             text = "Available categories for transaction mapping",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
+                        if (!isPremiumUser) {
+                            Text(
+                                text = "⭐ Adding custom categories requires Premium",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     IconButton(
-                        onClick = { showAddCategoryDialog = true },
+                        onClick = {
+                            if (isPremiumUser) {
+                                showAddCategoryDialog = true
+                            } else {
+                                // For free users, navigate back first then show upgrade dialog
+                                onBack()
+                                onAddCategory("")  // Empty string triggers premium check in ViewModel
+                            }
+                        },
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Icon(
@@ -149,7 +166,7 @@ fun ConfigureCategoryScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "Custom Category Mappings",
+                            text = "Custom Category Mappings (${customMappings.size})",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -161,11 +178,31 @@ fun ConfigureCategoryScreen(
                                 "No custom mappings yet - tap + to add",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
+                        if (!isPremiumUser) {
+                            Text(
+                                text = "Free tier: ${customMappings.size}/10 mappings used",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (customMappings.size >= 10)
+                                    MaterialTheme.colorScheme.error
+                                else
+                                    MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     IconButton(
-                        onClick = { showAddDialog = true },
+                        onClick = {
+                            if (isPremiumUser || customMappings.size < 10) {
+                                showAddDialog = true
+                            } else {
+                                // For free users at limit, navigate back first then show upgrade dialog
+                                onBack()
+                                // Trigger a dummy mapping to show upgrade dialog
+                                onAddMapping("", "")
+                            }
+                        },
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Icon(

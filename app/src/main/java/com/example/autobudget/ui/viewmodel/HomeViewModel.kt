@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.autobudget.data.local.PreferencesManager
+import com.example.autobudget.data.local.SubscriptionManager
 import com.example.autobudget.data.model.Transaction
 import com.example.autobudget.data.repository.TransactionRepository
 import com.example.autobudget.sheets.GoogleAuthManager
@@ -23,6 +24,7 @@ import kotlinx.coroutines.launch
 class HomeViewModel(
     private val transactionRepository: TransactionRepository,
     private val preferencesManager: PreferencesManager,
+    private val subscriptionManager: SubscriptionManager,
     private val googleAuthManager: GoogleAuthManager,
     private val googleSheetsManager: GoogleSheetsManager,
     private val syncManager: SyncManager
@@ -67,6 +69,10 @@ class HomeViewModel(
 
     val categories: StateFlow<Set<String>> = preferencesManager.categories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    // Subscription Status
+    val isPremiumUser: StateFlow<Boolean> = subscriptionManager.isPremiumUser
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
         // Load saved preferences
@@ -181,6 +187,23 @@ class HomeViewModel(
 
     fun addFinancialApp(packageName: String) {
         viewModelScope.launch {
+            val isPremium = isPremiumUser.value
+            val currentCount = configuredFinancialApps.value.size
+
+            if (!subscriptionManager.canAddFinancialApp(isPremium, currentCount)) {
+                _uiState.value = _uiState.value.copy(
+                    showUpgradeDialog = true,
+                    upgradeDialogFeature = "add more financial apps",
+                    upgradeDialogLimit = "Free users can add up to ${SubscriptionManager.FREE_FINANCIAL_APPS_LIMIT} financial apps. You currently have $currentCount."
+                )
+                return@launch
+            }
+
+            // If packageName is empty (used as signal from UI), don't proceed
+            if (packageName.isBlank()) {
+                return@launch
+            }
+
             preferencesManager.addFinancialApp(packageName)
             _uiState.value = _uiState.value.copy(
                 successMessage = "Added $packageName to monitored apps"
@@ -217,6 +240,23 @@ class HomeViewModel(
 
     fun addCategoryMapping(keyword: String, category: String) {
         viewModelScope.launch {
+            val isPremium = isPremiumUser.value
+            val currentCount = categoryMappings.value.size
+
+            if (!subscriptionManager.canAddCategoryMapping(isPremium, currentCount)) {
+                _uiState.value = _uiState.value.copy(
+                    showUpgradeDialog = true,
+                    upgradeDialogFeature = "add more category mappings",
+                    upgradeDialogLimit = "Free users can add up to ${SubscriptionManager.FREE_CATEGORY_MAPPINGS_LIMIT} category mappings. You currently have $currentCount."
+                )
+                return@launch
+            }
+
+            // If both keyword and category are empty (used as signal from UI), don't proceed
+            if (keyword.isBlank() && category.isBlank()) {
+                return@launch
+            }
+
             preferencesManager.addCategoryMapping(keyword, category)
             _uiState.value = _uiState.value.copy(
                 successMessage = "Added category mapping: $keyword → $category"
@@ -235,6 +275,22 @@ class HomeViewModel(
 
     fun addCategory(category: String) {
         viewModelScope.launch {
+            val isPremium = isPremiumUser.value
+
+            if (!subscriptionManager.canAddCategory(isPremium)) {
+                _uiState.value = _uiState.value.copy(
+                    showUpgradeDialog = true,
+                    upgradeDialogFeature = "add custom categories",
+                    upgradeDialogLimit = "Adding custom categories is a premium feature."
+                )
+                return@launch
+            }
+
+            // If category is empty (used as signal from UI), don't proceed
+            if (category.isBlank()) {
+                return@launch
+            }
+
             preferencesManager.addCategory(category)
             _uiState.value = _uiState.value.copy(
                 successMessage = "Added category: $category"
@@ -251,9 +307,52 @@ class HomeViewModel(
         }
     }
 
+    fun dismissUpgradeDialog() {
+        _uiState.value = _uiState.value.copy(
+            showUpgradeDialog = false,
+            upgradeDialogFeature = "",
+            upgradeDialogLimit = null
+        )
+    }
+
+    fun showUpgradeDialog() {
+        _uiState.value = _uiState.value.copy(
+            showUpgradeDialog = true,
+            upgradeDialogFeature = "unlock all premium features",
+            upgradeDialogLimit = "Get unlimited categories, mappings, and financial apps with Premium!"
+        )
+    }
+
+    fun upgradeToPremium(context: Context) {
+        // Dismiss the dialog first
+        dismissUpgradeDialog()
+
+        // Launch the billing flow
+        // Note: context should be an Activity for the billing flow to work properly
+        if (context is android.app.Activity) {
+            subscriptionManager.upgradeToPremium(context)
+        } else {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Unable to launch purchase flow"
+            )
+        }
+    }
+
+    // Development/Testing function - toggle premium status
+    fun debugTogglePremium() {
+        viewModelScope.launch {
+            subscriptionManager.debugTogglePremium()
+            val isPremium = isPremiumUser.value
+            _uiState.value = _uiState.value.copy(
+                successMessage = if (isPremium) "Upgraded to Premium (Testing)" else "Downgraded to Free (Testing)"
+            )
+        }
+    }
+
     class Factory(
         private val transactionRepository: TransactionRepository,
         private val preferencesManager: PreferencesManager,
+        private val subscriptionManager: SubscriptionManager,
         private val googleAuthManager: GoogleAuthManager,
         private val googleSheetsManager: GoogleSheetsManager,
         private val syncManager: SyncManager
@@ -263,6 +362,7 @@ class HomeViewModel(
             return HomeViewModel(
                 transactionRepository,
                 preferencesManager,
+                subscriptionManager,
                 googleAuthManager,
                 googleSheetsManager,
                 syncManager
@@ -274,6 +374,9 @@ class HomeViewModel(
 data class HomeUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val showUpgradeDialog: Boolean = false,
+    val upgradeDialogFeature: String = "",
+    val upgradeDialogLimit: String? = null
 )
 
