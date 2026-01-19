@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -235,14 +236,19 @@ fun HomeScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Upgrade to Premium",
-                                        color = MaterialTheme.colorScheme.primary,
+                                        text = if (isPremiumUser) "Premium Active - Cool!" else "Upgrade to Premium",
+                                        color = if (isPremiumUser)
+                                            Color(0xFF4CAF50)
+                                        else
+                                            MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold
                                     )
                                 },
                                 onClick = {
                                     showSettingsDropdown = false
-                                    viewModel.showUpgradeDialog()
+                                    if (!isPremiumUser) {
+                                        viewModel.showUpgradeDialog()
+                                    }
                                 }
                             )
                             HorizontalDivider()
