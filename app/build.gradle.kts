@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.autobudget"
+    namespace = "com.techstackers.autobudget"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.autobudget"
+        applicationId = "com.techstackers.autobudget"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -30,6 +30,8 @@ android {
 
     buildTypes {
         release {
+            // Use debug keystore for release builds (for testing only - use proper keystore for production)
+            // signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
