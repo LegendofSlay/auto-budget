@@ -41,6 +41,9 @@ android {
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = true
+            isJniDebuggable = true
+            isMinifyEnabled = false
             buildConfigField("boolean", "ENABLE_DEBUG_MENU", "true")
         }
     }
