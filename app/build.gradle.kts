@@ -40,6 +40,7 @@ android {
             buildConfigField("boolean", "ENABLE_DEBUG_MENU", "false")
         }
         debug {
+            applicationIdSuffix = ".dev"
             signingConfig = signingConfigs.getByName("debug")
             isDebuggable = true
             isJniDebuggable = true
